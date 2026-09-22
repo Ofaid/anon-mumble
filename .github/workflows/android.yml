@@ -31,12 +31,19 @@ jobs:
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v4
 
-      # ✅ STEP OTOMATIS: Download Gradle Lama & Build SpongyCastle
-      - name: Build SpongyCastle (Auto-Setup)
+      # ✅ STEP FIX: Patch Script Build SpongyCastle Otomatis + Build
+      - name: Build SpongyCastle (Patched)
         run: |
-          echo "🔍 Mengecek folder SpongyCastle..."
+          echo " Masuk ke folder SpongyCastle..."
           cd libraries/humla/libs/humla-spongycastle
           
+          # 1. FIX ERROR archiveClassifier (Ganti ke syntax lama 'classifier')
+          # Ini membuat script kompatibel dengan Gradle 4.10.3
+          echo "️ Mempatch build.gradle agar kompatibel..."
+          sed -i 's/archiveClassifier = .*/classifier = "javadoc"/g' build.gradle
+          sed -i 's/archiveClassifier = .*/classifier = "sources"/g' build.gradle
+          
+          # 2. Download Gradle Wrapper jika tidak ada
           if [ ! -f "gradlew" ]; then
             echo "⚠️ gradlew tidak ditemukan! Mengunduh Gradle 4.10.3..."
             wget -q https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
@@ -47,7 +54,8 @@ jobs:
             GRADLE_CMD="./gradlew"
           fi
           
-          echo " Memulai build SpongyCastle dengan Java 8 compatibility..."
+          # 3. Build dengan Java 8 Compatibility
+          echo "🔨 Memulai build SpongyCastle..."
           $GRADLE_CMD build -x test \
             -PsourceCompatibility=1.8 \
             -PtargetCompatibility=1.8 \
