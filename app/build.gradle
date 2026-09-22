@@ -82,7 +82,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true      
+            minifyEnabled false      
             shrinkResources false   // ✅ MATIKAN! Ini penyebab utama FC saat join server
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
