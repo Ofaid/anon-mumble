@@ -38,11 +38,10 @@ android {
     namespace = 'se.lublin.mumla'
     compileSdk = 36
 
-    // ✅ FIX UTAMA: Syntax Groovy yang benar (tanpa 'is' di depan)
+    // Compile Options (Tanpa baris desugaring yang error)
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-        coreLibraryDesugaringEnabled = true 
     }
 
     base {
@@ -61,10 +60,11 @@ android {
         versionName "1.0.6-OFAID"
         
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
 
-    ndk {
-        abiFilters "arm64-v8a", "armeabi-v7a"
+        // ✅ NDK SUDAH DIPINDAH KE SINI (Fix Error "Could not find method ndk()")
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a"
+        }
     }
 
     flavorDimensions "release"
@@ -97,7 +97,7 @@ android {
 }
 
 dependencies {
-    // Wajib untuk desugaring
+    // Desugaring Library (Tetap ada agar Java 8 jalan di Android lama)
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 
     implementation project(":libraries:humla")
