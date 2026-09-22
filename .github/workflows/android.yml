@@ -1,44 +1,10 @@
-name: Bangun Anon-Mumble OFAID
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  android:
-    name: Bangun APK Rilis (Android 7+)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    steps:
-      - name: Ambil kode & submodul
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Siapkan Java 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: gradle
-
-      - name: Siapkan Android SDK
-        uses: android-actions/setup-android@v4
-
-      # ✅ STEP FIX: Patch Script Build SpongyCastle Otomatis + Build
-      - name: Build SpongyCastle (Patched)
+# ✅ STEP FIX: Patch Script + Build Tanpa Javadoc
+      - name: Build SpongyCastle (No-Javadoc)
         run: |
           echo " Masuk ke folder SpongyCastle..."
           cd libraries/humla/libs/humla-spongycastle
           
           # 1. FIX ERROR archiveClassifier (Ganti ke syntax lama 'classifier')
-          # Ini membuat script kompatibel dengan Gradle 4.10.3
           echo "️ Mempatch build.gradle agar kompatibel..."
           sed -i 's/archiveClassifier = .*/classifier = "javadoc"/g' build.gradle
           sed -i 's/archiveClassifier = .*/classifier = "sources"/g' build.gradle
@@ -54,26 +20,13 @@ jobs:
             GRADLE_CMD="./gradlew"
           fi
           
-          # 3. Build dengan Java 8 Compatibility
-          echo "🔨 Memulai build SpongyCastle..."
-          $GRADLE_CMD build -x test \
+          # 3. Build DENGAN MEMATIKAN JAVADOC (-x javadoc)
+          # Ini solusi utama untuk error "tag not supported in HTML5"
+          echo "🔨 Memulai build SpongyCastle (Javadoc dimatikan)..."
+          $GRADLE_CMD build -x test -x javadoc \
             -PsourceCompatibility=1.8 \
             -PtargetCompatibility=1.8 \
             --no-daemon
             
           echo "✅ Build selesai. Verifikasi file jar..."
           find . -name "*.jar" -path "*/build/libs/*" -ls || echo "❌ GAGAL: File jar tidak ditemukan!"
-
-      - name: Izin jalankan Gradle Utama
-        run: chmod +x gradlew
-
-      - name: Bangun Versi Rilis Foss
-        run: ./gradlew assembleFossRelease --no-daemon --stacktrace
-
-      - name: Simpan APK hasil
-        uses: actions/upload-artifact@v4
-        with:
-          name: AnonMumble-Rilis-Clean
-          path: app/build/outputs/apk/foss/release/*.apk
-          retention-days: 30
-          if-no-files-found: error
