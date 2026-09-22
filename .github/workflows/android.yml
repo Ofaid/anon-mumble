@@ -15,42 +15,42 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      # 1. Ambil kode sumber beserta submodul (penting untuk library humla)
       - name: Ambil kode & submodul
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # 2. Setup Java 21 Temurin (Wajib untuk AGP 8.7.3)
       - name: Siapkan Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5 # Upgrade ke v5 sesuai warning
         with:
           distribution: 'temurin'
           java-version: '21'
           cache: gradle
 
-      # 3. FIX ERROR: Upgrade ke v4 agar tidak gagal mencari package 'tools' yang deprecated
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v4
 
-      # 4. Berikan izin eksekusi pada wrapper Gradle
-      - name: Izin jalankan Gradle
+      # ✅ STEP BARU: Build Library SpongyCastle Lokal Dulu!
+      # Ini wajib agar file .jar terbentuk di folder build/libs/
+      - name: Build SpongyCastle Local
+        run: |
+          cd libraries/humla/libs/humla-spongycastle
+          chmod +x gradlew
+          ./gradlew build -x test --no-daemon
+        continue-on-error: false 
+
+      - name: Izin jalankan Gradle Utama
         run: chmod +x gradlew
 
-      # 5. Build khusus flavor 'foss' release (sesuai build.gradle baru)
-      # --no-daemon: Mencegah memory leak di runner CI
-      # --stacktrace: Memudahkan debugging jika ada error
       - name: Bangun Versi Rilis Foss
         run: ./gradlew assembleFossRelease --no-daemon --stacktrace
 
-      # 6. Verifikasi bahwa APK benar-benar terbentuk sebelum upload
       - name: Verifikasi Output APK
         run: |
-          echo "📦 Mengecek file APK yang dihasilkan..."
-          ls -lh app/build/outputs/apk/foss/release/*.apk || echo "❌ GAGAL: Tidak ada APK ditemukan!"
+          echo "📦 Mengecek file APK..."
+          ls -lh app/build/outputs/apk/foss/release/*.apk || echo "❌ GAGAL: APK tidak ditemukan!"
 
-      # 7. Upload artifact dengan path yang BENAR (foss/release)
       - name: Simpan APK hasil
         uses: actions/upload-artifact@v4
         with:
