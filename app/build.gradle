@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Fixed for Anon-Mumble OFAID - Final Build Config
+ * Fixed for Anon-Mumble OFAID - Safe Build Config (No Resource Shrinking)
  */
 
 buildscript {
@@ -43,9 +43,16 @@ android {
         archivesName = "anon-mumble"
     }
 
-    // ✅ FIX: Aktifkan BuildConfig agar field TIMESTAMP & VERSIONTAG terbaca
     buildFeatures {
         buildConfig = true
+    }
+
+    // ✅ AMANKAN NATIVE LIBRARY (.so) AGAR TIDAK DIBUANG
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        pickFirst '**/*.so'
     }
 
     defaultConfig {
@@ -55,7 +62,6 @@ android {
         versionCode 7
         versionName "1.0.6-OFAID"
         
-        // ✅ FIX: Definisikan field BuildConfig yang dicari oleh kode Java
         buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
         buildConfigField "String", "VERSIONTAG", "\"1.0.6-OFAID\""
         
@@ -76,8 +82,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled true      
+            shrinkResources false   // ✅ MATIKAN! Ini penyebab utama FC saat join server
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
             if (project.hasProperty("signingConfigs") && signingConfigs.hasProperty("release")) {
@@ -100,15 +106,14 @@ dependencies {
 
     implementation project(":libraries:humla")
     
-    // ✅ FIX: Tambahkan library yang hilang (DocumentFile & ExifInterface)
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.fragment:fragment:1.8.9'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'androidx.preference:preference:1.2.1'
-    implementation 'androidx.documentfile:documentfile:1.1.0' // <-- DITAMBAHKAN
-    implementation 'androidx.exifinterface:exifinterface:1.4.2' // <-- DITAMBAHKAN
+    implementation 'androidx.documentfile:documentfile:1.1.0'
+    implementation 'androidx.exifinterface:exifinterface:1.4.2'
     
     implementation 'org.jsoup:jsoup:1.18.3'
     implementation 'info.guardianproject.netcipher:netcipher:2.1.0'
