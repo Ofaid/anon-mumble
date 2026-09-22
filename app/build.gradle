@@ -1,9 +1,8 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Fixed for Anon-Mumble OFAID - AGP 8.7.3 & Gradle 8.9 Compatible
+ * Fixed for Anon-Mumble OFAID - Final Build Config
  */
 
-// 1. BLOCK BUILDSRIPT: Load plugin Android
 buildscript {
     repositories {
         google()
@@ -14,16 +13,13 @@ buildscript {
     }
 }
 
-// 2. TERAPKAN PLUGIN ANDROID
 apply plugin: 'com.android.application'
 
-// 3. REPOSITORIES
 repositories {
     google()
     mavenCentral()
 }
 
-// Signing opsional
 def signingFile = file('signing.gradle')
 if (signingFile.exists()) apply from: signingFile
 
@@ -33,21 +29,21 @@ allprojects {
     }
 }
 
-// 4. KONFIGURASI ANDROID
 android {
     namespace = 'se.lublin.mumla'
     compileSdk = 36
 
-    // Compile Options (Tanpa baris desugaring yang error)
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled = true 
     }
 
     base {
         archivesName = "anon-mumble"
     }
 
+    // ✅ FIX: Aktifkan BuildConfig agar field TIMESTAMP & VERSIONTAG terbaca
     buildFeatures {
         buildConfig = true
     }
@@ -59,9 +55,12 @@ android {
         versionCode 7
         versionName "1.0.6-OFAID"
         
+        // ✅ FIX: Definisikan field BuildConfig yang dicari oleh kode Java
+        buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
+        buildConfigField "String", "VERSIONTAG", "\"1.0.6-OFAID\""
+        
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // ✅ NDK SUDAH DIPINDAH KE SINI (Fix Error "Could not find method ndk()")
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a"
         }
@@ -97,17 +96,19 @@ android {
 }
 
 dependencies {
-    // Desugaring Library (Tetap ada agar Java 8 jalan di Android lama)
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 
     implementation project(":libraries:humla")
     
+    // ✅ FIX: Tambahkan library yang hilang (DocumentFile & ExifInterface)
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.fragment:fragment:1.8.9'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'androidx.preference:preference:1.2.1'
+    implementation 'androidx.documentfile:documentfile:1.1.0' // <-- DITAMBAHKAN
+    implementation 'androidx.exifinterface:exifinterface:1.4.2' // <-- DITAMBAHKAN
     
     implementation 'org.jsoup:jsoup:1.18.3'
     implementation 'info.guardianproject.netcipher:netcipher:2.1.0'
