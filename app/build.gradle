@@ -1,27 +1,128 @@
+/*
+ * Copyright (C) 2014 Andrew Comminos
+ * Fixed for Anon-Mumble OFAID - AGP 8.7.3 Compatible
+ */
+
+// 1. BLOCK BUILDSRIPT: Harus paling atas untuk load plugin Android
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Versi stabil yang didukung GitHub Actions saat ini
+        classpath 'com.android.tools.build:gradle:8.7.3'
+    }
+}
+
+// 2. TERAPKAN PLUGIN ANDROID: Wajib ada agar blok 'android {}' dikenali
+apply plugin: 'com.android.application'
+
+// 3. REPOSITORIES UNTUK DEPENDENCIES APLIKASI
+repositories {
+    google()
+    mavenCentral()
+}
+
+// Signing opsional (agar CI tidak crash jika file signing tidak ada)
+def signingFile = file('signing.gradle')
+if (signingFile.exists()) apply from: signingFile
+
+allprojects {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:all" << "-Xlint:-deprecation"
+    }
+}
+
+// 4. KONFIGURASI ANDROID: Sekarang pasti dikenali karena plugin sudah di-apply di atas
 android {
-    compileSdk 34 // Atau versi terbaru yang stabil
+    namespace = 'se.lublin.mumla'
+    compileSdk = 36
+
+    compileOptions {
+        // Tetap pakai Java 21 untuk build tools, tapi output ke Java 8
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+        isCoreLibraryDesugaringEnabled = true 
+    }
+
+    base {
+        archivesName = "anon-mumble"
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
-        applicationId "com.ofaid.anonmumble"
-        // ✅ Target Android 7.0 (API 24) ke atas
-        minSdk 24 
-        targetSdk 34
+        minSdkVersion 21      // Support Android 5.0+ (Termasuk Android 7, 9, 10)
+        targetSdk = 34        // Turunkan ke 34 agar kompatibilitas storage lebih aman
+        applicationId "gratis.anon.mumble"
+        versionCode 7
+        versionName "1.0.6-OFAID"
         
-        versionCode 1
-        versionName "1.0"
-        
-        // ✅ Opsional: Jika pakai NDK/C++, batasi arsitektur agar APK lebih kecil
-        // ndk { abiFilters "arm64-v8a", "armeabi-v7a" }
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Optimasi ukuran APK
+    ndk {
+        abiFilters "arm64-v8a", "armeabi-v7a"
+    }
+
+    flavorDimensions "release"
+    productFlavors {
+        foss {
+            dimension "release"
+            applicationId "gratis.anon.mumble"
+        }
     }
 
     buildTypes {
         release {
-            minifyEnabled true      // ✅ Aktifkan ProGuard/R8 untuk mengecilkan ukuran & obfuscate kode
-            shrinkResources true    // ✅ Hapus resource yang tidak terpakai
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Pastikan signing config sudah diatur jika ingin langsung install (opsional di CI)
-            // signingConfig signingConfigs.release 
+            // Signing dinamis
+            if (project.hasProperty("signingConfigs") && signingConfigs.hasProperty("release")) {
+                signingConfig = signingConfigs.release
+            }
+        }
+        debug {
+            versionNameSuffix "-debug"
         }
     }
+
+    lint {
+        abortOnError = false
+        disable 'InvalidPackage', 'MissingTranslation'
+    }
+}
+
+dependencies {
+    // Wajib untuk desugaring Java 8 di Android lama
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+
+    implementation project(":libraries:humla")
+    
+    // AndroidX Libraries
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.fragment:fragment:1.8.9'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'androidx.preference:preference:1.2.1'
+    
+    // Networking & Security
+    implementation 'org.jsoup:jsoup:1.18.3'
+    implementation 'info.guardianproject.netcipher:netcipher:2.1.0'
+    
+    // Tor Embedded
+    implementation 'info.guardianproject:tor-android:0.4.8.16'
+    implementation 'info.guardianproject:jtorctl:0.4.5.7'
+    
+    // Biometric & Lifecycle
+    implementation 'androidx.biometric:biometric:1.2.0-alpha05'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 }
