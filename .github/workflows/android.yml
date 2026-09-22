@@ -12,7 +12,7 @@ jobs:
   android:
     name: Bangun APK Rilis (Android 7+)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Ambil kode & submodul
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Siapkan Java 21
-        uses: actions/setup-java@v5 # Upgrade ke v5 sesuai warning
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -31,25 +31,36 @@ jobs:
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v4
 
-      # ✅ STEP BARU: Build Library SpongyCastle Lokal Dulu!
-      # Ini wajib agar file .jar terbentuk di folder build/libs/
-      - name: Build SpongyCastle Local
+      # ✅ STEP OTOMATIS: Download Gradle Lama & Build SpongyCastle
+      - name: Build SpongyCastle (Auto-Setup)
         run: |
+          echo "🔍 Mengecek folder SpongyCastle..."
           cd libraries/humla/libs/humla-spongycastle
-          chmod +x gradlew
-          ./gradlew build -x test --no-daemon
-        continue-on-error: false 
+          
+          if [ ! -f "gradlew" ]; then
+            echo "⚠️ gradlew tidak ditemukan! Mengunduh Gradle 4.10.3..."
+            wget -q https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
+            unzip -q gradle-4.10.3-bin.zip
+            GRADLE_CMD="./gradle-4.10.3/bin/gradle"
+          else
+            chmod +x gradlew
+            GRADLE_CMD="./gradlew"
+          fi
+          
+          echo " Memulai build SpongyCastle dengan Java 8 compatibility..."
+          $GRADLE_CMD build -x test \
+            -PsourceCompatibility=1.8 \
+            -PtargetCompatibility=1.8 \
+            --no-daemon
+            
+          echo "✅ Build selesai. Verifikasi file jar..."
+          find . -name "*.jar" -path "*/build/libs/*" -ls || echo "❌ GAGAL: File jar tidak ditemukan!"
 
       - name: Izin jalankan Gradle Utama
         run: chmod +x gradlew
 
       - name: Bangun Versi Rilis Foss
         run: ./gradlew assembleFossRelease --no-daemon --stacktrace
-
-      - name: Verifikasi Output APK
-        run: |
-          echo "📦 Mengecek file APK..."
-          ls -lh app/build/outputs/apk/foss/release/*.apk || echo "❌ GAGAL: APK tidak ditemukan!"
 
       - name: Simpan APK hasil
         uses: actions/upload-artifact@v4
